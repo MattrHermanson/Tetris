@@ -9,8 +9,9 @@ int main (void) {
 
   SetTargetFPS(60);
 
-  int rectX = 400;
-  int rectY = 225;
+  Rectangle floor = {200, 300, 300, 10};
+  Rectangle player = {400, 225, 40, 40};
+
 
   while (!WindowShouldClose()) {
     
@@ -20,14 +21,23 @@ int main (void) {
     DrawText("Here is a square", 190, 200, 20, BLACK);
 
     if (IsKeyDown(KEY_A)) {
-      rectX -= 10;
+      player.x -= 10;
     }
 
     if (IsKeyDown(KEY_D)) {
-      rectX += 10;
+      player.x += 10;
     }
 
-    DrawRectangle(rectX, rectY, 40, 40, BLACK);
+    if (IsKeyPressed(KEY_SPACE)) {
+      player.y -= 50;
+    }
+
+    if (CheckCollisionRecs(player, floor) == false) {
+      player.y += 1;
+    }
+
+    DrawRectangle(floor.x, floor.y, floor.width, floor.height, GRAY);
+    DrawRectangle(player.x, player.y, 40, 40, BLACK);
 
     EndDrawing();
   }
