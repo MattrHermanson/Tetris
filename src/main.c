@@ -10,6 +10,11 @@ typedef struct GridLine {
   Color color;
 } GridLine;
 
+typedef struct Block {
+  Rectangle rect;
+  Color color;
+} Block;
+
 void createGameGrid(GridLine* grid, int rows, int cols, int size);
 void drawGameGrid(GridLine* grid, int rows, int cols);
 
@@ -20,20 +25,39 @@ int main (void) {
 
   GridLine gameGrid[23];
   createGameGrid(gameGrid, 15, 10, 40);
+  Block testBlock = {{0, 0, 40, 40}, BLUE};
 
   //40x40 blocks
 
   InitWindow(screenWidth, screenHeight, "Drawing a Square");
 
   SetTargetFPS(60);
+  //TODO get block to drop slowly without lowering target fps
 
+  float tickTimer = 0;
 
   while (!WindowShouldClose()) {
+
+    float deltaTime = GetFrameTime();
+    tickTimer += deltaTime;
     
     BeginDrawing(); 
 
     ClearBackground(RAYWHITE);
     drawGameGrid(gameGrid, 15, 10);
+    DrawRectangleRec(testBlock.rect, testBlock.color);
+
+    if (tickTimer > 1 && testBlock.rect.y < 560) {
+      testBlock.rect.y += 40;
+      tickTimer -= 1;
+    }
+
+    if (IsKeyPressed(KEY_A)) {
+      testBlock.rect.x -= 40;
+    }
+    if (IsKeyPressed(KEY_D)) {
+      testBlock.rect.x += 40;
+    }
 
 
     EndDrawing();
