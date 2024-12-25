@@ -11,12 +11,15 @@ typedef struct GridLine {
 } GridLine;
 
 typedef struct Block {
-  Rectangle rect;
+  Rectangle parentRect;
+  Rectangle childRect;
   Color color;
 } Block;
 
 void createGameGrid(GridLine* grid, int rows, int cols, int size);
 void drawGameGrid(GridLine* grid, int rows, int cols);
+void drawBlock(Block block);
+void moveBlock(Block* block, char axis, float dist);
 
 int main (void) {
 
@@ -25,17 +28,17 @@ int main (void) {
 
   GridLine gameGrid[23];
   createGameGrid(gameGrid, 15, 10, 40);
-  Block testBlock = {{0, 0, 40, 40}, BLUE};
+  Block testBlock = {{0, 0, 40, 40}, {0, 40, 120, 40}, BLUE};
 
   //40x40 blocks
 
   InitWindow(screenWidth, screenHeight, "Drawing a Square");
 
   SetTargetFPS(60);
-  //TODO get block to drop slowly without lowering target fps
 
   float tickTimer = 0;
 
+  
   while (!WindowShouldClose()) {
 
     float deltaTime = GetFrameTime();
@@ -45,18 +48,18 @@ int main (void) {
 
     ClearBackground(RAYWHITE);
     drawGameGrid(gameGrid, 15, 10);
-    DrawRectangleRec(testBlock.rect, testBlock.color);
+    drawBlock(testBlock);
 
-    if (tickTimer > 1 && testBlock.rect.y < 560) {
-      testBlock.rect.y += 40;
+    if (tickTimer > 1 && testBlock.childRect.y < 560) {
+      moveBlock(&testBlock, 'y', 40);
       tickTimer -= 1;
     }
 
     if (IsKeyPressed(KEY_A)) {
-      testBlock.rect.x -= 40;
+      moveBlock(&testBlock, 'x', -40);
     }
     if (IsKeyPressed(KEY_D)) {
-      testBlock.rect.x += 40;
+      moveBlock(&testBlock, 'x', 40);
     }
 
 
@@ -95,4 +98,24 @@ void drawGameGrid (GridLine* grid, int rows, int cols) {
     DrawRectangle(grid[i].pos.x, grid[i].pos.y, grid[i].width, 600, grid[i].color);
   }
 
+}
+
+void drawBlock (Block block) {
+  DrawRectangleRec(block.parentRect, block.color);
+  DrawRectangleRec(block.childRect, block.color);
+}
+
+void moveBlock (Block* block, char axis, float dist) {
+  switch (axis) {
+    case 'x':
+      block -> parentRect.x += dist;
+      block -> childRect.x += dist;
+      break;
+
+    case 'y':
+      block -> parentRect.y += dist;
+      block -> childRect.y += dist;
+      break;
+  }
+  
 }
