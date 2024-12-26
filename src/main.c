@@ -11,8 +11,10 @@ typedef struct GridLine {
 } GridLine;
 
 typedef struct Block {
-  Rectangle parentRect;
-  Rectangle childRect;
+  Rectangle rect0;
+  Rectangle rect1;
+  Rectangle rect2;
+  Rectangle rect3;
   Color color;
 } Block;
 
@@ -28,7 +30,7 @@ int main (void) {
 
   GridLine gameGrid[23];
   createGameGrid(gameGrid, 15, 10, 40);
-  Block testBlock = {{0, 0, 40, 40}, {0, 40, 120, 40}, BLUE};
+  Block testBlock = {{80, 40, 40, 40}, {40, 40, 40, 40}, {80, 0, 40, 40}, {120, 0, 40, 40}, BLUE};
 
   //40x40 blocks
 
@@ -38,6 +40,11 @@ int main (void) {
 
   float tickTimer = 0;
 
+  //TODO figure out rotation matrix thing
+  //standardize block size ie 40 across program with a variable
+  //make create block functions for tetrominoes i,j,l,o,s,t,z
+  //make bound checker
+  //make tile checker
   
   while (!WindowShouldClose()) {
 
@@ -50,7 +57,7 @@ int main (void) {
     drawGameGrid(gameGrid, 15, 10);
     drawBlock(testBlock);
 
-    if (tickTimer > 1 && testBlock.childRect.y < 560) {
+    if (tickTimer > 1) {
       moveBlock(&testBlock, 'y', 40);
       tickTimer -= 1;
     }
@@ -101,20 +108,26 @@ void drawGameGrid (GridLine* grid, int rows, int cols) {
 }
 
 void drawBlock (Block block) {
-  DrawRectangleRec(block.parentRect, block.color);
-  DrawRectangleRec(block.childRect, block.color);
+  DrawRectangleRec(block.rect0, block.color);
+  DrawRectangleRec(block.rect1, block.color);
+  DrawRectangleRec(block.rect2, block.color);
+  DrawRectangleRec(block.rect3, block.color);
 }
 
 void moveBlock (Block* block, char axis, float dist) {
   switch (axis) {
     case 'x':
-      block -> parentRect.x += dist;
-      block -> childRect.x += dist;
+      block -> rect0.x += dist;
+      block -> rect1.x += dist;
+      block -> rect2.x += dist;
+      block -> rect3.x += dist;
       break;
 
     case 'y':
-      block -> parentRect.y += dist;
-      block -> childRect.y += dist;
+      block -> rect0.y += dist;
+      block -> rect1.y += dist;
+      block -> rect2.y += dist;
+      block -> rect3.y += dist;
       break;
   }
   
