@@ -14,10 +14,7 @@ typedef struct GridLine {
 } GridLine;
 
 typedef struct Block {
-  Rectangle rect0;
-  Rectangle rect1;
-  Rectangle rect2;
-  Rectangle rect3;
+  Rectangle tiles[4];
   int rotaionIndex;
   Color color;
 } Block;
@@ -27,7 +24,17 @@ void drawGameGrid(GridLine* grid, int rows, int cols);
 void drawBlock(Block block);
 void moveBlock(Block* block, char axis, float dist);
 void rotateBlock(Block* block, bool direction);
+void addTiles(int tileBoard[screenWidth/gridBlockSize][screenHeight/gridBlockSize], Block* block);
+void removeTiles(int tileBoard[screenWidth/gridBlockSize][screenHeight/gridBlockSize], Block* block);
+int checkCollisionTiles(int tileBoard[screenWidth/gridBlockSize][screenHeight/gridBlockSize], Rectangle newRect);
 bool isInBounds(int x, int y);
+void createIBlock(Block *block, int x, int y, Color color);
+void createJBlock(Block *block, int x, int y, Color color);
+void createLBlock(Block *block, int x, int y, Color color);
+void createOBlock(Block *block, int x, int y, Color color);
+void createSBlock(Block *block, int x, int y, Color color);
+void createTBlock(Block *block, int x, int y, Color color);
+void createZBlock(Block *block, int x, int y, Color color);
 
 //an array that keeps track if there is a tile in that grid spot
 int board [screenWidth/gridBlockSize][screenHeight/gridBlockSize];
@@ -36,7 +43,11 @@ int main (void) {
 
   GridLine gameGrid[23];
   createGameGrid(gameGrid, 15, 10, 40);
-  Block testBlock = {{80, 40, gridBlockSize, gridBlockSize}, {40, 40, gridBlockSize, gridBlockSize}, {80, 0, gridBlockSize, gridBlockSize}, {120, 0, gridBlockSize, gridBlockSize}, 0, BLUE};
+  Block testBlock;
+  createTBlock(&testBlock, 120, 80, RED);
+
+  Block testBlock2;
+  createJBlock(&testBlock2, 160, 240, BLUE);
 
   InitWindow(screenWidth, screenHeight, "Drawing a Square");
 
@@ -45,7 +56,7 @@ int main (void) {
   float tickTimer = 0;
 
   //TODO add in wall kick tests
-  //make implement tile checking and tile updating in move and creation functions
+  //fix tile collision not working
   
   while (!WindowShouldClose()) {
 
@@ -57,6 +68,7 @@ int main (void) {
     ClearBackground(RAYWHITE);
     drawGameGrid(gameGrid, 15, 10);
     drawBlock(testBlock);
+    drawBlock(testBlock2);
 
     if (tickTimer > 1) {
       moveBlock(&testBlock, 'y', 40);
@@ -115,50 +127,85 @@ void drawGameGrid (GridLine* grid, int rows, int cols) {
 }
 
 void drawBlock (Block block) {
-  DrawRectangleRec(block.rect0, block.color);
-  DrawRectangleRec(block.rect1, block.color);
-  DrawRectangleRec(block.rect2, block.color);
-  DrawRectangleRec(block.rect3, block.color);
+  for (int i = 0; i < 4; i++) {
+    DrawRectangleRec(block.tiles[i], block.color);
+  } 
 }
 
 void moveBlock (Block* block, char axis, float dist) {
   switch (axis) {
     case 'x':
-      if (isInBounds((block -> rect0.x + dist), block -> rect0.y) == false ||
-          isInBounds((block -> rect1.x + dist), block -> rect1.y) == false ||
-          isInBounds((block -> rect2.x + dist), block -> rect2.y) == false ||
-          isInBounds((block -> rect3.x + dist), block -> rect3.y == false)) {
-        return; 
+      //check if inbounds of screen
+      for (int i = 0; i < 4; i++) {
+        if (isInBounds((block -> tiles[i].x + dist), block -> tiles[i].y) == false) {
+          return;
+        }
       }
 
-      block -> rect0.x += dist;
-      block -> rect1.x += dist;
-      block -> rect2.x += dist;
-      block -> rect3.x += dist;
+      removeTiles(board, block);
+
+      //move block
+      for (int i = 0; i < 4; i++) {
+        block -> tiles[i].x += dist;
+      }
+      
+      //check collision on all 4 tiles of the block
+      for (int i = 0; i < 4; i++) {
+        if (checkCollisionTiles(board, block -> tiles[i]) == 1) {
+
+          //undo block move
+          for (int j = 0; j < 4; j++) {
+            block -> tiles[j].x -= dist;
+          }
+          break;
+        }
+      }
+
+      addTiles(board, block);
+      
       break;
 
     case 'y':
-      if (isInBounds(block -> rect0.x, (block -> rect0.y + dist)) == false ||
-          isInBounds(block -> rect1.x, (block -> rect1.y + dist)) == false ||
-          isInBounds(block -> rect2.x, (block -> rect2.y + dist)) == false ||
-          isInBounds(block -> rect3.x, (block -> rect3.y + dist))  == false) {
-        return; 
+      //same as x
+      for (int i = 0; i < 4; i++) {
+        if (isInBounds(block -> tiles[i].x, (block -> tiles[i].y + dist)) == false) {
+          return;
+        }
       }
 
-      block -> rect0.y += dist;
-      block -> rect1.y += dist;
-      block -> rect2.y += dist;
-      block -> rect3.y += dist;
+      removeTiles(board, block);
+
+      //move block
+      for (int i = 0; i < 4; i++) {
+        block -> tiles[i].y += dist;
+      }
+
+      //check collision on all 4 tiles of block
+      for (int i = 0; i < 4; i++) {
+        if (checkCollisionTiles(board, block -> tiles[i]) == 1) {
+
+          //undo block move
+          for (int j = 0; j < 4; j++) {
+            block -> tiles[j].y -= dist;
+          }
+          break;
+        }
+      }
+
+      addTiles(board, block);
+
       break;
   }
-  
 }
 
 //rotate the block
 //True = clockwise; False = counter clockwise
 void rotateBlock (Block* block, bool direction) {
  
-  Rectangle rectArr[] = {block -> rect0, block -> rect1, block -> rect2, block -> rect3};
+  Rectangle rectArr[4];
+  for (int i = 0; i < 4; i++) {
+    rectArr[i] = block -> tiles[i];
+  }
 
   for (int i = 1; i < 4; i++) {
     rectArr[i].x -= rectArr[0].x;
@@ -190,181 +237,225 @@ void rotateBlock (Block* block, bool direction) {
     rectArr[i].y += rectArr[0].y;
   }
 
-  block -> rect1 = rectArr[1];
-  block -> rect2 = rectArr[2];
-  block -> rect3 = rectArr[3];
+  for (int i = 0; i < 4; i++) {
+    block -> tiles[i] = rectArr[i];
+  }
+}
+
+void addTiles (int tileBoard[screenWidth/gridBlockSize][screenHeight/gridBlockSize], Block* block) {
+  for (int i = 0; i < 4; i++) {
+    int x = block -> tiles[i].x;
+    int y = block -> tiles[i].y;
+
+    tileBoard[x/gridBlockSize][y/gridBlockSize] = 1;
+  }  
+}
+
+void removeTiles (int tileBoard[screenWidth/gridBlockSize][screenHeight/gridBlockSize], Block* block) {
+  for (int i = 0; i < 4; i++) {
+    int x = block -> tiles[i].x;
+    int y = block -> tiles[i].y;
+
+    tileBoard[x/gridBlockSize][y/gridBlockSize] = 0;
+  } 
+}
+
+//return 1 if move will result in collision
+int checkCollisionTiles (int tileBoard[screenWidth/gridBlockSize][screenHeight/gridBlockSize], Rectangle newRect) {
+  int x = newRect.x;
+  int y = newRect.y;
+
+  if (tileBoard[x/gridBlockSize][y/gridBlockSize] == 1) {
+    return 1;
+  } else {
+    return 0;
+  }
 }
 
 void createIBlock (Block* block, int x, int y, Color color) {
-  block -> rect0.x = x;
-  block -> rect0.y = y;
-  block -> rect0.width = gridBlockSize;
-  block -> rect0.height = gridBlockSize;
+  block -> tiles[0].x = x;
+  block -> tiles[0].y = y;
+  block -> tiles[0].width = gridBlockSize;
+  block -> tiles[0].height = gridBlockSize;
 
-  block -> rect1.x = (x - gridBlockSize);
-  block -> rect1.y = y;
-  block -> rect1.width = gridBlockSize;
-  block -> rect1.height = gridBlockSize;
+  block -> tiles[1].x = (x - gridBlockSize);
+  block -> tiles[1].y = y;
+  block -> tiles[1].width = gridBlockSize;
+  block -> tiles[1].height = gridBlockSize;
 
-  block -> rect2.x = (x + gridBlockSize);
-  block -> rect2.y = y;
-  block -> rect2.width = gridBlockSize;
-  block -> rect2.height = gridBlockSize;
+  block -> tiles[2].x = (x + gridBlockSize);
+  block -> tiles[2].y = y;
+  block -> tiles[2].width = gridBlockSize;
+  block -> tiles[2].height = gridBlockSize;
 
-  block -> rect3.x = (x + (2 * gridBlockSize));
-  block -> rect3.y = y; 
-  block -> rect3.width = gridBlockSize; 
-  block -> rect3.height = gridBlockSize;
+  block -> tiles[3].x = (x + (2 * gridBlockSize));
+  block -> tiles[3].y = y; 
+  block -> tiles[3].width = gridBlockSize; 
+  block -> tiles[3].height = gridBlockSize;
   block -> rotaionIndex = 0;
   block -> color = color;
+
+  addTiles(board, block);
 }
 
 void createJBlock (Block* block, int x, int y, Color color) {
-  block -> rect0.x = x;
-  block -> rect0.y = y;
-  block -> rect0.width = gridBlockSize;
-  block -> rect0.height = gridBlockSize;
+  block -> tiles[0].x = x;
+  block -> tiles[0].y = y;
+  block -> tiles[0].width = gridBlockSize;
+  block -> tiles[0].height = gridBlockSize;
 
-  block -> rect1.x = (x - gridBlockSize);
-  block -> rect1.y = y;
-  block -> rect1.width = gridBlockSize;
-  block -> rect1.height = gridBlockSize;
+  block -> tiles[1].x = (x - gridBlockSize);
+  block -> tiles[1].y = y;
+  block -> tiles[1].width = gridBlockSize;
+  block -> tiles[1].height = gridBlockSize;
 
-  block -> rect2.x = (x - gridBlockSize);
-  block -> rect2.y = (y - gridBlockSize);
-  block -> rect2.width = gridBlockSize;
-  block -> rect2.height = gridBlockSize;
+  block -> tiles[2].x = (x - gridBlockSize);
+  block -> tiles[2].y = (y - gridBlockSize);
+  block -> tiles[2].width = gridBlockSize;
+  block -> tiles[2].height = gridBlockSize;
 
-  block -> rect3.x = (x + (2 * gridBlockSize));
-  block -> rect3.y = y; 
-  block -> rect3.width = gridBlockSize; 
-  block -> rect3.height = gridBlockSize;
+  block -> tiles[3].x = (x + gridBlockSize);
+  block -> tiles[3].y = y; 
+  block -> tiles[3].width = gridBlockSize; 
+  block -> tiles[3].height = gridBlockSize;
   block -> rotaionIndex = 0;
   block -> color = color;
+
+  addTiles(board, block);
 }
 
 void createLBlock (Block* block, int x, int y, Color color) {
-  block -> rect0.x = x;
-  block -> rect0.y = y;
-  block -> rect0.width = gridBlockSize;
-  block -> rect0.height = gridBlockSize;
+  block -> tiles[0].x = x;
+  block -> tiles[0].y = y;
+  block -> tiles[0].width = gridBlockSize;
+  block -> tiles[0].height = gridBlockSize;
 
-  block -> rect1.x = (x - gridBlockSize);
-  block -> rect1.y = y;
-  block -> rect1.width = gridBlockSize;
-  block -> rect1.height = gridBlockSize;
+  block -> tiles[1].x = (x - gridBlockSize);
+  block -> tiles[1].y = y;
+  block -> tiles[1].width = gridBlockSize;
+  block -> tiles[1].height = gridBlockSize;
 
-  block -> rect2.x = (x + gridBlockSize);
-  block -> rect2.y = y;
-  block -> rect2.width = gridBlockSize;
-  block -> rect2.height = gridBlockSize;
+  block -> tiles[2].x = (x + gridBlockSize);
+  block -> tiles[2].y = y;
+  block -> tiles[2].width = gridBlockSize;
+  block -> tiles[2].height = gridBlockSize;
 
-  block -> rect3.x = (x + gridBlockSize);
-  block -> rect3.y = (y - gridBlockSize); 
-  block -> rect3.width = gridBlockSize; 
-  block -> rect3.height = gridBlockSize;
+  block -> tiles[3].x = (x + gridBlockSize);
+  block -> tiles[3].y = (y - gridBlockSize); 
+  block -> tiles[3].width = gridBlockSize; 
+  block -> tiles[3].height = gridBlockSize;
   block -> rotaionIndex = 0;
   block -> color = color;
+
+  addTiles(board, block);
 }
 
 void createOBlock (Block* block, int x, int y, Color color) {
-  block -> rect0.x = x;
-  block -> rect0.y = y;
-  block -> rect0.width = gridBlockSize;
-  block -> rect0.height = gridBlockSize;
+  block -> tiles[0].x = x;
+  block -> tiles[0].y = y;
+  block -> tiles[0].width = gridBlockSize;
+  block -> tiles[0].height = gridBlockSize;
 
-  block -> rect1.x = x;
-  block -> rect1.y = (y - gridBlockSize);
-  block -> rect1.width = gridBlockSize;
-  block -> rect1.height = gridBlockSize;
+  block -> tiles[1].x = x;
+  block -> tiles[1].y = (y - gridBlockSize);
+  block -> tiles[1].width = gridBlockSize;
+  block -> tiles[1].height = gridBlockSize;
 
-  block -> rect2.x = (x + gridBlockSize);
-  block -> rect2.y = y;
-  block -> rect2.width = gridBlockSize;
-  block -> rect2.height = gridBlockSize;
+  block -> tiles[2].x = (x + gridBlockSize);
+  block -> tiles[2].y = y;
+  block -> tiles[2].width = gridBlockSize;
+  block -> tiles[2].height = gridBlockSize;
 
-  block -> rect3.x = (x + gridBlockSize);
-  block -> rect3.y = (y - gridBlockSize); 
-  block -> rect3.width = gridBlockSize; 
-  block -> rect3.height = gridBlockSize;
+  block -> tiles[3].x = (x + gridBlockSize);
+  block -> tiles[3].y = (y - gridBlockSize); 
+  block -> tiles[3].width = gridBlockSize; 
+  block -> tiles[3].height = gridBlockSize;
   block -> rotaionIndex = 0;
   block -> color = color;
+
+  addTiles(board, block);
 }
 
 void createSBlock (Block* block, int x, int y, Color color) {
-  block -> rect0.x = x;
-  block -> rect0.y = y;
-  block -> rect0.width = gridBlockSize;
-  block -> rect0.height = gridBlockSize;
+  block -> tiles[0].x = x;
+  block -> tiles[0].y = y;
+  block -> tiles[0].width = gridBlockSize;
+  block -> tiles[0].height = gridBlockSize;
 
-  block -> rect1.x = (x - gridBlockSize);
-  block -> rect1.y = y;
-  block -> rect1.width = gridBlockSize;
-  block -> rect1.height = gridBlockSize;
+  block -> tiles[1].x = (x - gridBlockSize);
+  block -> tiles[1].y = y;
+  block -> tiles[1].width = gridBlockSize;
+  block -> tiles[1].height = gridBlockSize;
 
-  block -> rect2.x = x;
-  block -> rect2.y = (y - gridBlockSize);
-  block -> rect2.width = gridBlockSize;
-  block -> rect2.height = gridBlockSize;
+  block -> tiles[2].x = x;
+  block -> tiles[2].y = (y - gridBlockSize);
+  block -> tiles[2].width = gridBlockSize;
+  block -> tiles[2].height = gridBlockSize;
 
-  block -> rect3.x = (x + gridBlockSize);
-  block -> rect3.y = (y - gridBlockSize); 
-  block -> rect3.width = gridBlockSize; 
-  block -> rect3.height = gridBlockSize;
+  block -> tiles[3].x = (x + gridBlockSize);
+  block -> tiles[3].y = (y - gridBlockSize); 
+  block -> tiles[3].width = gridBlockSize; 
+  block -> tiles[3].height = gridBlockSize;
   block -> rotaionIndex = 0;
   block -> color = color;
+
+  addTiles(board, block);
 }
 
 void createTBlock (Block* block, int x, int y, Color color) {
-  block -> rect0.x = x;
-  block -> rect0.y = y;
-  block -> rect0.width = gridBlockSize;
-  block -> rect0.height = gridBlockSize;
+  block -> tiles[0].x = x;
+  block -> tiles[0].y = y;
+  block -> tiles[0].width = gridBlockSize;
+  block -> tiles[0].height = gridBlockSize;
 
-  block -> rect1.x = (x - gridBlockSize);
-  block -> rect1.y = y;
-  block -> rect1.width = gridBlockSize;
-  block -> rect1.height = gridBlockSize;
+  block -> tiles[1].x = (x - gridBlockSize);
+  block -> tiles[1].y = y;
+  block -> tiles[1].width = gridBlockSize;
+  block -> tiles[1].height = gridBlockSize;
 
-  block -> rect2.x = (x + gridBlockSize);
-  block -> rect2.y = y;
-  block -> rect2.width = gridBlockSize;
-  block -> rect2.height = gridBlockSize;
+  block -> tiles[2].x = (x + gridBlockSize);
+  block -> tiles[2].y = y;
+  block -> tiles[2].width = gridBlockSize;
+  block -> tiles[2].height = gridBlockSize;
 
-  block -> rect3.x = x;
-  block -> rect3.y = (y - gridBlockSize); 
-  block -> rect3.width = gridBlockSize; 
-  block -> rect3.height = gridBlockSize;
+  block -> tiles[3].x = x;
+  block -> tiles[3].y = (y - gridBlockSize); 
+  block -> tiles[3].width = gridBlockSize; 
+  block -> tiles[3].height = gridBlockSize;
   block -> rotaionIndex = 0;
   block -> color = color;
+
+  addTiles(board, block);
 }
 
 void createZBlock (Block* block, int x, int y, Color color) {
-  block -> rect0.x = x;
-  block -> rect0.y = y;
-  block -> rect0.width = gridBlockSize;
-  block -> rect0.height = gridBlockSize;
+  block -> tiles[0].x = x;
+  block -> tiles[0].y = y;
+  block -> tiles[0].width = gridBlockSize;
+  block -> tiles[0].height = gridBlockSize;
 
-  block -> rect1.x = (x - gridBlockSize);
-  block -> rect1.y = (y - gridBlockSize);
-  block -> rect1.width = gridBlockSize;
-  block -> rect1.height = gridBlockSize;
+  block -> tiles[1].x = (x - gridBlockSize);
+  block -> tiles[1].y = (y - gridBlockSize);
+  block -> tiles[1].width = gridBlockSize;
+  block -> tiles[1].height = gridBlockSize;
 
-  block -> rect2.x = x;
-  block -> rect2.y = (y - gridBlockSize);
-  block -> rect2.width = gridBlockSize;
-  block -> rect2.height = gridBlockSize;
+  block -> tiles[2].x = x;
+  block -> tiles[2].y = (y - gridBlockSize);
+  block -> tiles[2].width = gridBlockSize;
+  block -> tiles[2].height = gridBlockSize;
 
-  block -> rect3.x = (x + gridBlockSize);
-  block -> rect3.y = y; 
-  block -> rect3.width = gridBlockSize; 
-  block -> rect3.height = gridBlockSize;
+  block -> tiles[3].x = (x + gridBlockSize);
+  block -> tiles[3].y = y; 
+  block -> tiles[3].width = gridBlockSize; 
+  block -> tiles[3].height = gridBlockSize;
   block -> rotaionIndex = 0;
   block -> color = color;
+
+  addTiles(board, block);
 }
 
-bool isInBounds(int x, int y) {
-  if (x >= 0 && x < (screenWidth - gridBlockSize) && y > 0 && y < screenHeight) {
+bool isInBounds (int x, int y) {
+  if (x >= 0 && x <= (screenWidth - gridBlockSize) && y > 0 && y < screenHeight) {
     return true;
   }
 
